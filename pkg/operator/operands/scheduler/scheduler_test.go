@@ -138,6 +138,15 @@ var _ = Describe("Scheduler", func() {
 
 			Expect(err).To(BeNil())
 			Expect(cm.Data["config.yaml"]).To(MatchYAML(`actions: allocate, consolidation, reclaim, preempt, stalegangeviction
+scenarioSearchBudgets:
+    maxActionSearchDuration:
+        default: 5m0s
+    maxGeneratorSearchDuration:
+        MultiNodeGang: 2m0s
+        NodeLocalGreedy: 30s
+        default: 2m0s
+    maxJobSearchDuration: 4m0s
+    minJobSearchDuration: 0s
 tiers:
     - plugins:
         - name: predicates
@@ -184,6 +193,15 @@ tiers:
 
 			Expect(err).To(BeNil())
 			Expect(cm.Data["config.yaml"]).To(MatchYAML(`actions: allocate, reclaim, preempt, stalegangeviction
+scenarioSearchBudgets:
+    maxActionSearchDuration:
+        default: 5m0s
+    maxGeneratorSearchDuration:
+        MultiNodeGang: 2m0s
+        NodeLocalGreedy: 30s
+        default: 2m0s
+    maxJobSearchDuration: 4m0s
+    minJobSearchDuration: 0s
 tiers:
     - plugins:
         - name: predicates

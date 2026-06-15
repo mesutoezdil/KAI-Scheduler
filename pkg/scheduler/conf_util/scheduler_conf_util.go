@@ -26,6 +26,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	kaiv1 "github.com/kai-scheduler/KAI-scheduler/pkg/apis/kai/v1"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/conf"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/framework"
 )
@@ -123,6 +124,7 @@ func loadSchedulerConf(confStr string) (*conf.SchedulerConfiguration, error) {
 	if _, err := GetActionsFromConfig(schedulerConf); err != nil {
 		return nil, err
 	}
+	schedulerConf.ScenarioSearchBudgets = kaiv1.DefaultScenarioSearchBudgets(schedulerConf.ScenarioSearchBudgets)
 
 	return schedulerConf, nil
 }

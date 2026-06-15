@@ -150,6 +150,34 @@ spec:
                 description: QueueDepthPerAction max number of jobs to try for action
                   per queue
                 type: object
+              scenarioSearchBudgets:
+                description: ScenarioSearchBudgets configures alpha/experimental time
+                  budgets for scenario search.
+                properties:
+                  maxActionSearchDuration:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      MaxActionSearchDuration limits total scenario search time per scheduler action.
+                      Keys are action names, with "default" used as the fallback budget.
+                    type: object
+                  maxGeneratorSearchDuration:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      MaxGeneratorSearchDuration limits scenario search time per generator attempt.
+                      Keys are generator names, with "default" used as the fallback budget.
+                    type: object
+                  maxJobSearchDuration:
+                    description: MaxJobSearchDuration limits total scenario search
+                      time per pending job.
+                    type: string
+                  minJobSearchDuration:
+                    description: |-
+                      MinJobSearchDuration guarantees each pending job this much scenario search time
+                      before action and generator budgets can stop the job's search.
+                    type: string
+                type: object
               usageDBConfig:
                 description: UsageDBConfig defines configuration for the usage db
                   client
