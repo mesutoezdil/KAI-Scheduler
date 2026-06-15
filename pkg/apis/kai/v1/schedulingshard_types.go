@@ -131,7 +131,8 @@ type SchedulingShardSpec struct {
 	// resourcetype=1500, podaffinity=1400, elastic=1300, kubeflow=1200,
 	// ray=1100, subgrouporder=1000, taskorder=900, nominatednode=800,
 	// dynamicresources=700, minruntime=600, topology=500, snapshot=400,
-	// gpupack/gpuspread=300, nodeplacement=200, gpusharingorder=100.
+	// sg-nodelocalgreedy=360, sg-multinodegang=350, gpupack/gpuspread=300,
+	// nodeplacement=200, gpusharingorder=100.
 	// +kubebuilder:validation:Optional
 	Plugins map[string]PluginConfig `json:"plugins,omitempty"`
 
@@ -195,26 +196,28 @@ func mustParseScenarioSearchDuration(value string) metav1.Duration {
 // Default priorities preserve the current hardcoded ordering.
 // Higher priority = runs first. Spaced by 100.
 var defaultPluginPriorities = map[string]int{
-	"predicates":       1900,
-	"proportion":       1800,
-	"priority":         1700,
-	"nodeavailability": 1600,
-	"resourcetype":     1500,
-	"podaffinity":      1400,
-	"elastic":          1300,
-	"kubeflow":         1200,
-	"ray":              1100,
-	"subgrouporder":    1000,
-	"taskorder":        900,
-	"nominatednode":    800,
-	"dynamicresources": 700,
-	"minruntime":       600,
-	"topology":         500,
-	"snapshot":         400,
-	"gpupack":          300,
-	"gpuspread":        300,
-	"nodeplacement":    200,
-	"gpusharingorder":  100,
+	"predicates":         1900,
+	"proportion":         1800,
+	"priority":           1700,
+	"nodeavailability":   1600,
+	"resourcetype":       1500,
+	"podaffinity":        1400,
+	"elastic":            1300,
+	"kubeflow":           1200,
+	"ray":                1100,
+	"subgrouporder":      1000,
+	"taskorder":          900,
+	"nominatednode":      800,
+	"dynamicresources":   700,
+	"minruntime":         600,
+	"topology":           500,
+	"snapshot":           400,
+	"sg-nodelocalgreedy": 360,
+	"sg-multinodegang":   350,
+	"gpupack":            300,
+	"gpuspread":          300,
+	"nodeplacement":      200,
+	"gpusharingorder":    100,
 }
 
 var defaultActionPriorities = map[string]int{
