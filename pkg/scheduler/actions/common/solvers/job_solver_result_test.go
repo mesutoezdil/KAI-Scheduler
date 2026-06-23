@@ -177,7 +177,7 @@ func TestSolveWithResultRecordsGeneratorExhaustedMetricAfterGeneratorAttempt(t *
 	}
 	before := scenarioSearchCounterValue(t, "scenario_search_jobs_total", labels)
 	ssn, pendingJob := newJobSolverResultTestSession(t, 1)
-	ssn.AddScenarioGenerator("empty", portfolioTestFactory(&portfolioTestGenerator{name: "empty"}), framework.Reclaim)
+	ssn.AddScenarioGenerator("empty", portfolioTestFactory(&portfolioTestGenerator{name: "empty"}))
 	solver := NewJobsSolver(
 		nil,
 		nil,
@@ -212,7 +212,7 @@ func TestSolveWithResultRecordsUnsolvedScenarioDurationAfterSimulation(t *testin
 	ssn.AddScenarioGenerator(generatorName, portfolioTestFactory(&portfolioTestGenerator{
 		name:      generatorName,
 		scenarios: []api.ScenarioInfo{scenarioToSolve},
-	}), framework.Reclaim)
+	}))
 	solver := NewJobsSolver(
 		nil,
 		nil,
