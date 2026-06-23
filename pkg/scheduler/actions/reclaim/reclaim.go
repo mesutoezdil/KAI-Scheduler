@@ -120,10 +120,6 @@ func (ra *reclaimAction) attemptToReclaimForSpecificJob(
 	log.InfraLogger.V(3).Infof("Attempting to reclaim for job: <%v/%v> of queue <%v>, resources: <%v>",
 		reclaimer.Namespace, reclaimer.Name, queue.Name, resReq)
 
-	if actionBudget != nil && actionBudget.Exhausted() {
-		return false, nil, nil, solvers.NewNotAttemptedSearchResult()
-	}
-
 	ssn.OnJobSolutionStart()
 
 	feasibleNodes := common.FeasibleNodesForJob(maps.Values(ssn.ClusterInfo.Nodes), reclaimer)

@@ -19,6 +19,7 @@ import (
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/node_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/podgroup_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/queue_info"
+	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/resource_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/framework"
 )
 
@@ -49,7 +50,6 @@ func TestSolveWithResultReturnsTerminalResultWhenNoTasksToAllocate(t *testing.T)
 	require.Empty(t, victims)
 	require.Equal(t, SearchResultGeneratorsExhausted, result.Reason())
 	require.False(t, result.ReducedBudget())
-	require.False(t, result.EnteredSearch())
 }
 
 func TestSolveWithResultReturnsNoGeneratorWhenGeneratorFuncIsNil(t *testing.T) {
@@ -63,7 +63,6 @@ func TestSolveWithResultReturnsNoGeneratorWhenGeneratorFuncIsNil(t *testing.T) {
 	require.Empty(t, victims)
 	require.Equal(t, SearchResultNoGenerator, result.Reason())
 	require.False(t, result.ReducedBudget())
-	require.False(t, result.EnteredSearch())
 }
 
 func TestSolveWithResultReturnsNoGeneratorWhenGeneratorReturnsNil(t *testing.T) {
@@ -85,7 +84,6 @@ func TestSolveWithResultReturnsNoGeneratorWhenGeneratorReturnsNil(t *testing.T) 
 	require.Empty(t, victims)
 	require.Equal(t, SearchResultNoGenerator, result.Reason())
 	require.False(t, result.ReducedBudget())
-	require.False(t, result.EnteredSearch())
 }
 
 func TestSolveWithResultUsesMinJobBudgetAfterActionBudgetExpired(t *testing.T) {
@@ -113,10 +111,9 @@ func TestSolveWithResultUsesMinJobBudgetAfterActionBudgetExpired(t *testing.T) {
 	require.Empty(t, victims)
 	require.Equal(t, SearchResultNoGenerator, result.Reason())
 	require.True(t, result.ReducedBudget())
-	require.False(t, result.EnteredSearch())
 }
 
-func TestSolveWithResultReportsDeadlineBeforeScenarioSimulation(t *testing.T) {
+func TestSolveWithResultReportsDeadlineWhenBudgetExhaustsDuringScenarioSearch(t *testing.T) {
 	clock := &fakeClock{now: time.Unix(0, 0)}
 	actionBudget, err := newActionSearchBudgetWithClock(
 		sessionWithScenarioSearchBudgets(&kaiv1.ScenarioSearchBudgets{
@@ -130,8 +127,13 @@ func TestSolveWithResultReportsDeadlineBeforeScenarioSimulation(t *testing.T) {
 	)
 	require.NoError(t, err)
 	ssn, pendingJob := newJobSolverResultTestSession(t, 1)
+	node := node_info.NewNodeInfo(
+		common_info.BuildNode("node-0", common_info.BuildResourceList("4", "16Gi")),
+		nil, resource_info.NewResourceVectorMap(),
+	)
+	ssn.ClusterInfo.Nodes[node.Name] = node
 	solver := NewJobsSolver(
-		nil,
+		[]*node_info.NodeInfo{node},
 		nil,
 		func() *utils.JobsOrderByQueues {
 			clock.Advance(time.Millisecond)
@@ -147,13 +149,12 @@ func TestSolveWithResultReportsDeadlineBeforeScenarioSimulation(t *testing.T) {
 	require.Nil(t, statement)
 	require.Empty(t, victims)
 	require.Equal(t, SearchResultDeadlineExhausted, result.Reason())
-	require.False(t, result.EnteredSearch())
 }
 
-func TestSearchMaxSolvableKPreservesEnteredSearchAfterTerminalPartialProbe(t *testing.T) {
+func TestSearchMaxSolvableKStopsAfterTerminalPartialProbe(t *testing.T) {
 	probes := map[int]*SearchResult{
 		1: solvedSearchResult(&solutionResult{solved: true}, false),
-		2: terminalSearchResult(SearchResultDeadlineExhausted, false, false),
+		2: terminalSearchResult(SearchResultDeadlineExhausted, false),
 	}
 
 	maxSolvedK, result := searchMaxSolvableK(3, func(k int) *SearchResult {
@@ -162,15 +163,6 @@ func TestSearchMaxSolvableKPreservesEnteredSearchAfterTerminalPartialProbe(t *te
 
 	require.Equal(t, 0, maxSolvedK)
 	require.Equal(t, SearchResultDeadlineExhausted, result.Reason())
-	require.True(t, result.EnteredSearch())
-}
-
-func TestPreserveEnteredSearchMarksTerminalResult(t *testing.T) {
-	result := terminalSearchResult(SearchResultDeadlineExhausted, false, false)
-
-	preserveEnteredSearch(result, true)
-
-	require.True(t, result.EnteredSearch())
 }
 
 func newJobSolverResultTestSession(t *testing.T, tasksCount int) (*framework.Session, *podgroup_info.PodGroupInfo) {

@@ -57,13 +57,6 @@ func NewJobsSolver(
 	}
 }
 
-func (s *JobSolver) ensureActionBudget() *ActionSearchBudget {
-	if s.actionBudget == nil {
-		s.actionBudget = newUnlimitedActionSearchBudget(s.actionType)
-	}
-	return s.actionBudget
-}
-
 func newUnlimitedActionSearchBudget(action framework.ActionType) *ActionSearchBudget {
 	now := time.Now
 	return &ActionSearchBudget{
@@ -102,30 +95,25 @@ func (s *JobSolver) SolveWithResult(
 	n := len(tasksToAllocate)
 	if n == 0 {
 		return false, nil, calcVictimNames(state.recordedVictimsTasks),
-			terminalSearchResult(SearchResultGeneratorsExhausted, false, false)
+			terminalSearchResult(SearchResultGeneratorsExhausted, false)
 	}
 
-	actionBudget := s.ensureActionBudget()
-	jobBudget := actionBudget.BeginJob()
+	jobBudget := s.actionBudget.BeginJob()
 	if jobBudget.Exhausted() {
 		return false, nil, calcVictimNames(state.recordedVictimsTasks),
-			terminalSearchResult(SearchResultNotAttempted, false, false)
+			terminalSearchResult(SearchResultNotAttempted, false)
 	}
 
-	enteredSearch := false
 	maxSolvedK, searchResult := s.searchMaxSolvableK(ssn, &state, pendingJob, tasksToAllocate, jobBudget)
-	enteredSearch = searchResultEntered(searchResult) || maxSolvedK > 0
 	if maxSolvedK == 0 {
 		if searchResult == nil {
-			searchResult = terminalSearchResult(SearchResultGeneratorsExhausted, false, false)
+			searchResult = terminalSearchResult(SearchResultGeneratorsExhausted, false)
 		}
-		preserveEnteredSearch(searchResult, enteredSearch)
 		return false, nil, calcVictimNames(state.recordedVictimsTasks), searchResult
 	}
 
 	result := s.probeAtK(ssn, &state, pendingJob, tasksToAllocate, n, jobBudget)
 	if !resultSolved(result) {
-		preserveEnteredSearch(result, enteredSearch)
 		return false, nil, calcVictimNames(state.recordedVictimsTasks), result
 	}
 
@@ -172,13 +160,10 @@ func searchMaxSolvableK(n int, probe func(k int) *SearchResult) (int, *SearchRes
 	lo := 0
 	var hi int
 	var lastUnsolvedResult *SearchResult
-	enteredSearch := false
 	k := 1
 	for {
 		result := probe(k)
-		enteredSearch = enteredSearch || searchResultEntered(result) || resultSolved(result)
 		if shouldStopSearch(result) {
-			preserveEnteredSearch(result, enteredSearch)
 			return 0, result
 		}
 		if !resultSolved(result) {
@@ -199,9 +184,7 @@ func searchMaxSolvableK(n int, probe func(k int) *SearchResult) (int, *SearchRes
 	for hi-lo > 1 {
 		mid := (lo + hi) / 2
 		result := probe(mid)
-		enteredSearch = enteredSearch || searchResultEntered(result) || resultSolved(result)
 		if shouldStopSearch(result) {
-			preserveEnteredSearch(result, enteredSearch)
 			return 0, result
 		}
 		if resultSolved(result) {
@@ -260,7 +243,7 @@ func (s *JobSolver) solvePartialJob(
 	jobBudget *jobSearchBudget,
 ) *SearchResult {
 	if jobBudget == nil {
-		jobBudget = s.ensureActionBudget().BeginJob()
+		jobBudget = newUnlimitedActionSearchBudget(s.actionType).BeginJob()
 	}
 
 	feasibleNodeMap := map[string]*node_info.NodeInfo{}
@@ -273,21 +256,20 @@ func (s *JobSolver) solvePartialJob(
 	}
 
 	if s.generateVictimsQueue == nil {
-		return terminalSearchResult(SearchResultNoGenerator, jobBudget.ReducedBudget(), false)
+		return terminalSearchResult(SearchResultNoGenerator, jobBudget.ReducedBudget())
 	}
 	victimsQueue := s.generateVictimsQueue()
 	if victimsQueue == nil {
-		return terminalSearchResult(SearchResultNoGenerator, jobBudget.ReducedBudget(), false)
+		return terminalSearchResult(SearchResultNoGenerator, jobBudget.ReducedBudget())
 	}
 
 	scenarioBuilder := NewPodAccumulatedScenarioBuilder(
 		ssn, partialPendingJob, state.recordedVictimsJobs, victimsQueue, feasibleNodeMap)
 
-	enteredSearch := false
 	firstScenario := true
 	for {
 		if jobBudget.Exhausted() {
-			return terminalSearchResult(SearchResultDeadlineExhausted, jobBudget.ReducedBudget(), enteredSearch)
+			return terminalSearchResult(SearchResultDeadlineExhausted, jobBudget.ReducedBudget())
 		}
 		var scenarioToSolve *solverscenario.ByNodeScenario
 		if firstScenario {
@@ -296,16 +278,9 @@ func (s *JobSolver) solvePartialJob(
 		} else {
 			scenarioToSolve = scenarioBuilder.GetNextScenario()
 		}
-		if jobBudget.Exhausted() {
-			return terminalSearchResult(SearchResultDeadlineExhausted, jobBudget.ReducedBudget(), enteredSearch)
-		}
 		if scenarioToSolve == nil {
-			if jobBudget.Exhausted() {
-				return terminalSearchResult(SearchResultDeadlineExhausted, jobBudget.ReducedBudget(), enteredSearch)
-			}
 			break
 		}
-		enteredSearch = true
 		scenarioSolver := newByPodSolver(feasibleNodeMap, s.solutionValidator, ssn.AllowConsolidatingReclaim(),
 			s.actionType)
 
@@ -318,17 +293,7 @@ func (s *JobSolver) solvePartialJob(
 		}
 	}
 
-	return terminalSearchResult(SearchResultGeneratorsExhausted, jobBudget.ReducedBudget(), enteredSearch)
-}
-
-func searchResultEntered(result *SearchResult) bool {
-	return result != nil && result.EnteredSearch()
-}
-
-func preserveEnteredSearch(result *SearchResult, enteredSearch bool) {
-	if result != nil && enteredSearch {
-		result.enteredSearch = true
-	}
+	return terminalSearchResult(SearchResultGeneratorsExhausted, jobBudget.ReducedBudget())
 }
 
 func shouldStopSearch(result *SearchResult) bool {

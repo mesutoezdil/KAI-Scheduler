@@ -19,7 +19,6 @@ type SearchResult struct {
 	reason        SearchResultReason
 	solution      *solutionResult
 	reducedBudget bool
-	enteredSearch bool
 }
 
 func (r *SearchResult) Reason() SearchResultReason {
@@ -36,16 +35,9 @@ func (r *SearchResult) ReducedBudget() bool {
 	return r.reducedBudget
 }
 
-func (r *SearchResult) EnteredSearch() bool {
-	if r == nil {
-		return false
-	}
-	return r.enteredSearch
-}
-
 // NewNotAttemptedSearchResult returns a terminal result for callers that skip solver entry.
 func NewNotAttemptedSearchResult() *SearchResult {
-	return terminalSearchResult(SearchResultNotAttempted, false, false)
+	return terminalSearchResult(SearchResultNotAttempted, false)
 }
 
 func solvedSearchResult(solution *solutionResult, reducedBudget bool) *SearchResult {
@@ -53,14 +45,12 @@ func solvedSearchResult(solution *solutionResult, reducedBudget bool) *SearchRes
 		reason:        SearchResultSolved,
 		solution:      solution,
 		reducedBudget: reducedBudget,
-		enteredSearch: true,
 	}
 }
 
-func terminalSearchResult(reason SearchResultReason, reducedBudget bool, enteredSearch bool) *SearchResult {
+func terminalSearchResult(reason SearchResultReason, reducedBudget bool) *SearchResult {
 	return &SearchResult{
 		reason:        reason,
 		reducedBudget: reducedBudget,
-		enteredSearch: enteredSearch,
 	}
 }
