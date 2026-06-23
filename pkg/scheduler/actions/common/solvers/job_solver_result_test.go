@@ -135,7 +135,11 @@ func TestSolveWithResultReportsDeadlineWhenBudgetExhaustsDuringScenarioSearch(t 
 		nil, resource_info.NewResourceVectorMap(),
 	)
 	ssn.ClusterInfo.Nodes[node.Name] = node
-	ssn.AddScenarioGenerator("deadline-test", NewMultiNodeGangGenerator, framework.Reclaim)
+	ssn.AddScenarioGenerator("deadline-test", func(ctx framework.ScenarioGeneratorContext) framework.ScenarioGenerator {
+		solveCtx := ctx.(*SolveContext)
+		solveCtx.GenerateVictimsQueue()
+		return &portfolioTestGenerator{name: "deadline-test"}
+	}, framework.Reclaim)
 	solver := NewJobsSolver(
 		[]*node_info.NodeInfo{node},
 		nil,
