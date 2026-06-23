@@ -46,9 +46,9 @@ func newScenarioPortfolio(ctx *SolveContext, jobBudget *jobSearchBudget) *scenar
 			stopReason: SearchResultNoGenerator,
 		}
 	}
-	return newScenarioPortfolioForRegistrations(
+	return newScenarioPortfolioForAvailableGenerators(
 		ctx, jobBudget,
-		applicableScenarioGeneratorRegistrations(ctx.Session, ctx.ActionType),
+		ctx.Session.ScenarioGeneratorRegistrations,
 		nil,
 	)
 }
@@ -56,18 +56,18 @@ func newScenarioPortfolio(ctx *SolveContext, jobBudget *jobSearchBudget) *scenar
 func newSingleGeneratorScenarioPortfolio(
 	ctx *SolveContext,
 	jobBudget *jobSearchBudget,
-	registration framework.ScenarioGeneratorRegistration,
+	availableGenerator framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget,
 ) *scenarioPortfolio {
-	return newScenarioPortfolioForRegistrations(
-		ctx, jobBudget, []framework.ScenarioGeneratorRegistration{registration}, generatorBudget,
+	return newScenarioPortfolioForAvailableGenerators(
+		ctx, jobBudget, []framework.ScenarioGeneratorRegistration{availableGenerator}, generatorBudget,
 	)
 }
 
-func newScenarioPortfolioForRegistrations(
+func newScenarioPortfolioForAvailableGenerators(
 	ctx *SolveContext,
 	jobBudget *jobSearchBudget,
-	registrations []framework.ScenarioGeneratorRegistration,
+	availableGenerators []framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget,
 ) *scenarioPortfolio {
 	portfolio := &scenarioPortfolio{
@@ -81,18 +81,18 @@ func newScenarioPortfolioForRegistrations(
 		return portfolio
 	}
 
-	for _, registration := range registrations {
-		if registration.Factory == nil {
+	for _, availableGenerator := range availableGenerators {
+		if availableGenerator.Factory == nil {
 			continue
 		}
-		generator := registration.Factory(ctx)
+		generator := availableGenerator.Factory(ctx)
 		if generator == nil {
 			continue
 		}
 		portfolio.generators = append(portfolio.generators, generator)
 	}
 	if len(portfolio.generators) == 0 {
-		if len(registrations) == 0 {
+		if len(availableGenerators) == 0 {
 			portfolio.stopReason = SearchResultNoGenerator
 		}
 	}
@@ -148,32 +148,6 @@ func (p *scenarioPortfolio) currentGenerator() framework.ScenarioGenerator {
 func (p *scenarioPortfolio) moveToNextGenerator() {
 	p.currentIndex++
 	p.currentBudget = nil
-}
-
-func scenarioGeneratorAppliesToAction(
-	registration framework.ScenarioGeneratorRegistration, action framework.ActionType,
-) bool {
-	if len(registration.Actions) == 0 {
-		return true
-	}
-	_, applies := registration.Actions[action]
-	return applies
-}
-
-func applicableScenarioGeneratorRegistrations(
-	ssn *framework.Session, action framework.ActionType,
-) []framework.ScenarioGeneratorRegistration {
-	if ssn == nil {
-		return nil
-	}
-	registrations := []framework.ScenarioGeneratorRegistration{}
-	for _, registration := range ssn.ScenarioGeneratorRegistrations {
-		if registration.Factory == nil || !scenarioGeneratorAppliesToAction(registration, action) {
-			continue
-		}
-		registrations = append(registrations, registration)
-	}
-	return registrations
 }
 
 // ValidateScenarioGeneratorContext extracts the solver context required by scenario generator plugins.

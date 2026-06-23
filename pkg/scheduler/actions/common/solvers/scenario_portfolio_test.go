@@ -35,27 +35,6 @@ func TestScenarioPortfolioUsesRegistrationOrder(t *testing.T) {
 	require.Equal(t, SearchResultGeneratorsExhausted, portfolio.StopReason())
 }
 
-func TestScenarioPortfolioFiltersByAction(t *testing.T) {
-	ctx, _, firstScenario := newScenarioPortfolioTestContext(t, framework.Reclaim)
-	preemptOnly := &portfolioTestGenerator{name: "preempt", scenarios: []api.ScenarioInfo{
-		newPortfolioTestByNodeScenario(t, ctx.Session, ctx.PartialPendingJob),
-	}}
-	reclaimOnly := &portfolioTestGenerator{name: "reclaim", scenarios: []api.ScenarioInfo{firstScenario}}
-	allActionsScenario := newPortfolioTestByNodeScenario(t, ctx.Session, ctx.PartialPendingJob)
-	allActions := &portfolioTestGenerator{name: "all", scenarios: []api.ScenarioInfo{allActionsScenario}}
-	ctx.Session.AddScenarioGenerator("preempt", portfolioTestFactory(preemptOnly), framework.Preempt)
-	ctx.Session.AddScenarioGenerator("reclaim", portfolioTestFactory(reclaimOnly), framework.Reclaim)
-	ctx.Session.AddScenarioGenerator("all", portfolioTestFactory(allActions))
-
-	portfolio := newScenarioPortfolio(ctx, newUnlimitedActionSearchBudget(framework.Reclaim).BeginJob())
-
-	require.Same(t, firstScenario, portfolio.Next())
-	require.Same(t, allActionsScenario, portfolio.Next())
-	require.Nil(t, portfolio.Next())
-	require.Zero(t, preemptOnly.nextCalls)
-	require.Equal(t, SearchResultGeneratorsExhausted, portfolio.StopReason())
-}
-
 func TestScenarioPortfolioDoesNotChargeGeneratorBuildTimeToGeneratorDeadline(t *testing.T) {
 	clock := &fakeClock{now: time.Unix(0, 0)}
 	ctx, _, firstScenario := newScenarioPortfolioTestContext(t, framework.Reclaim)
@@ -128,16 +107,12 @@ func TestScenarioPortfolioDoesNotChargeGeneratorBuildTimeToJobDeadline(t *testin
 	require.Same(t, firstScenario, portfolio.Next())
 }
 
-func TestScenarioPortfolioReturnsNoGeneratorWhenNoRegistrationApplies(t *testing.T) {
-	ctx, _, firstScenario := newScenarioPortfolioTestContext(t, framework.Reclaim)
-	preemptOnly := &portfolioTestGenerator{name: "preempt", scenarios: []api.ScenarioInfo{firstScenario}}
-	ctx.Session.AddScenarioGenerator("preempt", portfolioTestFactory(preemptOnly), framework.Preempt)
-
+func TestScenarioPortfolioReturnsNoGeneratorWhenNoAvailableGenerators(t *testing.T) {
+	ctx, _, _ := newScenarioPortfolioTestContext(t, framework.Reclaim)
 	portfolio := newScenarioPortfolio(ctx, newUnlimitedActionSearchBudget(framework.Reclaim).BeginJob())
 
 	require.Nil(t, portfolio.Next())
 	require.Equal(t, SearchResultNoGenerator, portfolio.StopReason())
-	require.Zero(t, preemptOnly.nextCalls)
 }
 
 func TestScenarioPortfolioReturnsGeneratorsExhaustedAfterAllGeneratorsEnd(t *testing.T) {

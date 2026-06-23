@@ -103,18 +103,18 @@ func (s *JobSolver) SolveWithResult(
 	if s.generateVictimsQueue == nil {
 		return false, nil, nil, terminalSearchResult(SearchResultNoGenerator, jobBudget.ReducedBudget())
 	}
-	registrations := applicableScenarioGeneratorRegistrations(ssn, s.actionType)
-	if len(registrations) == 0 {
+	availableGenerators := ssn.ScenarioGeneratorRegistrations
+	if len(availableGenerators) == 0 {
 		return false, nil, nil, terminalSearchResult(SearchResultNoGenerator, jobBudget.ReducedBudget())
 	}
 
 	var lastVictimTasks []*pod_info.PodInfo
 	var lastResult *SearchResult
-	for _, registration := range registrations {
+	for _, availableGenerator := range availableGenerators {
 		state := solvingState{}
-		generatorBudget := jobBudget.BeginGenerator(registration.Name)
+		generatorBudget := jobBudget.BeginGenerator(availableGenerator.Name)
 		result := s.solvePendingJobWithGenerator(
-			ssn, &state, pendingJob, tasksToAllocate, jobBudget, registration, generatorBudget,
+			ssn, &state, pendingJob, tasksToAllocate, jobBudget, availableGenerator, generatorBudget,
 		)
 		lastVictimTasks = state.recordedVictimsTasks
 		lastResult = result
@@ -150,12 +150,12 @@ func (s *JobSolver) solvePendingJobWithGenerator(
 	pendingJob *podgroup_info.PodGroupInfo,
 	tasksToAllocate []*pod_info.PodInfo,
 	jobBudget *jobSearchBudget,
-	registration framework.ScenarioGeneratorRegistration,
+	availableGenerator framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget,
 ) *SearchResult {
 	n := len(tasksToAllocate)
 	maxSolvedK, searchResult := s.searchMaxSolvableK(
-		ssn, state, pendingJob, tasksToAllocate, jobBudget, registration, generatorBudget,
+		ssn, state, pendingJob, tasksToAllocate, jobBudget, availableGenerator, generatorBudget,
 	)
 	if maxSolvedK == 0 {
 		if searchResult == nil {
@@ -164,7 +164,7 @@ func (s *JobSolver) solvePendingJobWithGenerator(
 		return searchResult
 	}
 
-	result := s.probeAtK(ssn, state, pendingJob, tasksToAllocate, n, jobBudget, registration, generatorBudget)
+	result := s.probeAtK(ssn, state, pendingJob, tasksToAllocate, n, jobBudget, availableGenerator, generatorBudget)
 	return result
 }
 
@@ -179,7 +179,7 @@ func (s *JobSolver) searchMaxSolvableK(
 	pendingJob *podgroup_info.PodGroupInfo,
 	tasksToAllocate []*pod_info.PodInfo,
 	jobBudget *jobSearchBudget,
-	registration framework.ScenarioGeneratorRegistration,
+	availableGenerator framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget,
 ) (int, *SearchResult) {
 	n := len(tasksToAllocate)
@@ -189,7 +189,7 @@ func (s *JobSolver) searchMaxSolvableK(
 
 	return searchMaxSolvableK(n, func(k int) *SearchResult {
 		return s.tryProbeAndDiscard(
-			ssn, state, pendingJob, tasksToAllocate, k, jobBudget, registration, generatorBudget,
+			ssn, state, pendingJob, tasksToAllocate, k, jobBudget, availableGenerator, generatorBudget,
 		)
 	})
 }
@@ -248,10 +248,10 @@ func (s *JobSolver) tryProbeAndDiscard(
 	tasksToAllocate []*pod_info.PodInfo,
 	k int,
 	jobBudget *jobSearchBudget,
-	registration framework.ScenarioGeneratorRegistration,
+	availableGenerator framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget,
 ) *SearchResult {
-	result := s.probeAtK(ssn, state, pendingJob, tasksToAllocate, k, jobBudget, registration, generatorBudget)
+	result := s.probeAtK(ssn, state, pendingJob, tasksToAllocate, k, jobBudget, availableGenerator, generatorBudget)
 	if !resultSolved(result) {
 		log.InfraLogger.V(5).Infof("No solution found for %d tasks out of %d tasks to allocate for %s",
 			k, len(tasksToAllocate), pendingJob.Name)
@@ -276,17 +276,17 @@ func (s *JobSolver) probeAtK(
 	tasksToAllocate []*pod_info.PodInfo,
 	k int,
 	jobBudget *jobSearchBudget,
-	registration framework.ScenarioGeneratorRegistration,
+	availableGenerator framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget,
 ) *SearchResult {
 	pendingTasks := tasksToAllocate[:k]
 	partialPendingJob := getPartialJobRepresentative(pendingJob, pendingTasks)
-	return s.solvePartialJob(ssn, state, partialPendingJob, jobBudget, registration, generatorBudget, k)
+	return s.solvePartialJob(ssn, state, partialPendingJob, jobBudget, availableGenerator, generatorBudget, k)
 }
 
 func (s *JobSolver) solvePartialJob(
 	ssn *framework.Session, state *solvingState, partialPendingJob *podgroup_info.PodGroupInfo,
-	jobBudget *jobSearchBudget, registration framework.ScenarioGeneratorRegistration,
+	jobBudget *jobSearchBudget, availableGenerator framework.ScenarioGeneratorRegistration,
 	generatorBudget *generatorSearchBudget, probeK int,
 ) *SearchResult {
 	if jobBudget == nil {
@@ -312,7 +312,7 @@ func (s *JobSolver) solvePartialJob(
 		FeasibleNodes:        feasibleNodeMap,
 		ProbeK:               probeK,
 	}
-	portfolio := newSingleGeneratorScenarioPortfolio(solveCtx, jobBudget, registration, generatorBudget)
+	portfolio := newSingleGeneratorScenarioPortfolio(solveCtx, jobBudget, availableGenerator, generatorBudget)
 
 	for {
 		if jobBudget.Exhausted() {

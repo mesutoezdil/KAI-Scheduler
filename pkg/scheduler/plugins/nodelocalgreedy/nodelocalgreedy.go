@@ -34,5 +34,5 @@ func addScenarioGenerator(
 			return
 		}
 	}
-	ssn.AddScenarioGenerator(name, factory, framework.Reclaim, framework.Preempt, framework.Consolidation)
+	ssn.AddScenarioGenerator(name, factory)
 }

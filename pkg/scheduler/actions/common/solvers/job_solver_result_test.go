@@ -139,7 +139,7 @@ func TestSolveWithResultReportsDeadlineWhenBudgetExhaustsDuringScenarioSearch(t 
 		solveCtx := ctx.(*SolveContext)
 		solveCtx.GenerateVictimsQueue()
 		return &portfolioTestGenerator{name: "deadline-test"}
-	}, framework.Reclaim)
+	})
 	solver := NewJobsSolver(
 		[]*node_info.NodeInfo{node},
 		nil,
@@ -175,7 +175,7 @@ func TestSolveWithResultRunsCompletePartialSearchForOneGeneratorBeforeNext(t *te
 		solveCtx := ctx.(*SolveContext)
 		factoryCalls = append(factoryCalls, fmt.Sprintf("first:%d", solveCtx.ProbeK))
 		return &portfolioTestGenerator{name: "first"}
-	}, framework.Reclaim)
+	})
 	ssn.AddScenarioGenerator("second", func(ctx framework.ScenarioGeneratorContext) framework.ScenarioGenerator {
 		solveCtx := ctx.(*SolveContext)
 		factoryCalls = append(factoryCalls, fmt.Sprintf("second:%d", solveCtx.ProbeK))
@@ -188,7 +188,7 @@ func TestSolveWithResultRunsCompletePartialSearchForOneGeneratorBeforeNext(t *te
 			solveCtx.RecordedVictimsJobs,
 		)
 		return &portfolioTestGenerator{name: "second", scenarios: []api.ScenarioInfo{sn}}
-	}, framework.Reclaim)
+	})
 	solver := NewJobsSolver(
 		jobSolverResultTestFeasibleNodes(ssn),
 		nil,

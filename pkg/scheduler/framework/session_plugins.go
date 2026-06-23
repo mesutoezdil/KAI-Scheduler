@@ -131,15 +131,10 @@ func (ssn *Session) AddPreJobAllocationFn(fn api.PreJobAllocationFn) {
 	ssn.PreJobAllocationFns = append(ssn.PreJobAllocationFns, fn)
 }
 
-func (ssn *Session) AddScenarioGenerator(name string, factory ScenarioGeneratorFactory, applies ...ActionType) {
-	actions := map[ActionType]struct{}{}
-	for _, action := range applies {
-		actions[action] = struct{}{}
-	}
+func (ssn *Session) AddScenarioGenerator(name string, factory ScenarioGeneratorFactory) {
 	ssn.ScenarioGeneratorRegistrations = append(ssn.ScenarioGeneratorRegistrations, ScenarioGeneratorRegistration{
 		Name:    name,
 		Factory: factory,
-		Actions: actions,
 	})
 }
 
