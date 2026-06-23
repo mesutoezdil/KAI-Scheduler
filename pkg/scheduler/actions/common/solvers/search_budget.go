@@ -23,22 +23,23 @@ type ActionSearchBudget struct {
 	jobLimit        time.Duration
 	minJobSearch    time.Duration
 	generatorLimits map[string]time.Duration
-	startedAt       time.Time
-	now             func() time.Time
+	deadline        deadlineBudget
+}
+
+type deadlineBudget struct {
+	deadline  time.Time
+	unlimited bool
+	now       func() time.Time
 }
 
 type jobSearchBudget struct {
-	remainingAtStart time.Duration
-	reducedBudget    bool
-	startedAt        time.Time
-	now              func() time.Time
-	generatorLimits  map[string]time.Duration
+	deadline      deadlineBudget
+	reducedBudget bool
+	actionBudget  *ActionSearchBudget
 }
 
 type generatorSearchBudget struct {
-	remainingAtStart time.Duration
-	startedAt        time.Time
-	now              func() time.Time
+	deadline deadlineBudget
 }
 
 // NewActionSearchBudget parses scenario search budget config for one scheduler action.
@@ -86,41 +87,31 @@ func newActionSearchBudgetWithClock(
 		jobLimit:        jobLimit,
 		minJobSearch:    minJobSearch,
 		generatorLimits: generatorLimits,
-		startedAt:       now(),
-		now:             now,
+		deadline:        newDeadlineBudget(searchDurationForLimit(actionLimit), now),
 	}, nil
 }
 
 func (b *ActionSearchBudget) BeginJob() *jobSearchBudget {
 	if b == nil {
-		now := time.Now
 		return &jobSearchBudget{
-			startedAt: now(),
-			now:       now,
+			deadline: newDeadlineBudget(0, time.Now),
 		}
 	}
-	now := clockOrDefault(b.now)
+	now := b.clock()
 
 	actionRemaining := b.Remaining()
-	if actionRemaining <= 0 {
-		return &jobSearchBudget{
-			startedAt:       now(),
-			now:             now,
-			generatorLimits: b.generatorLimits,
-		}
-	}
-
 	remaining := actionRemaining
 	if b.jobLimit != 0 && b.jobLimit < remaining {
 		remaining = b.jobLimit
 	}
+	if b.minJobSearch > remaining {
+		remaining = b.minJobSearch
+	}
 
 	return &jobSearchBudget{
-		remainingAtStart: remaining,
-		reducedBudget:    b.minJobSearch > 0 && actionRemaining < b.minJobSearch,
-		startedAt:        now(),
-		now:              now,
-		generatorLimits:  b.generatorLimits,
+		deadline:      newDeadlineBudget(remaining, now),
+		reducedBudget: b.jobLimit > 0 && actionRemaining < b.jobLimit,
+		actionBudget:  b,
 	}
 }
 
@@ -128,10 +119,7 @@ func (b *ActionSearchBudget) Remaining() time.Duration {
 	if b == nil {
 		return 0
 	}
-	if b.actionLimit == 0 {
-		return unlimitedRemaining
-	}
-	return remainingFromStart(b.actionLimit, b.startedAt, b.now)
+	return b.deadline.Remaining()
 }
 
 func (b *ActionSearchBudget) Exhausted() bool {
@@ -140,22 +128,13 @@ func (b *ActionSearchBudget) Exhausted() bool {
 
 func (b *jobSearchBudget) BeginGenerator(name string) *generatorSearchBudget {
 	if b == nil {
-		now := time.Now
 		return &generatorSearchBudget{
-			startedAt: now(),
-			now:       now,
+			deadline: newDeadlineBudget(0, time.Now),
 		}
 	}
-	now := clockOrDefault(b.now)
+	now := b.clock()
 
 	jobRemaining := b.Remaining()
-	if jobRemaining <= 0 {
-		return &generatorSearchBudget{
-			startedAt: now(),
-			now:       now,
-		}
-	}
-
 	generatorRemaining := jobRemaining
 	generatorLimit := b.generatorLimit(name)
 	if generatorLimit != 0 && generatorLimit < generatorRemaining {
@@ -163,9 +142,7 @@ func (b *jobSearchBudget) BeginGenerator(name string) *generatorSearchBudget {
 	}
 
 	return &generatorSearchBudget{
-		remainingAtStart: generatorRemaining,
-		startedAt:        now(),
-		now:              now,
+		deadline: newDeadlineBudget(generatorRemaining, now),
 	}
 }
 
@@ -173,7 +150,7 @@ func (b *jobSearchBudget) Remaining() time.Duration {
 	if b == nil {
 		return 0
 	}
-	return remainingFromStart(b.remainingAtStart, b.startedAt, b.now)
+	return b.deadline.Remaining()
 }
 
 func (b *jobSearchBudget) ReducedBudget() bool {
@@ -187,7 +164,7 @@ func (b *generatorSearchBudget) Remaining() time.Duration {
 	if b == nil {
 		return 0
 	}
-	return remainingFromStart(b.remainingAtStart, b.startedAt, b.now)
+	return b.deadline.Remaining()
 }
 
 func (b *generatorSearchBudget) Exhausted() bool {
@@ -195,24 +172,65 @@ func (b *generatorSearchBudget) Exhausted() bool {
 }
 
 func (b *jobSearchBudget) generatorLimit(name string) time.Duration {
-	if b == nil || b.generatorLimits == nil {
+	if b == nil || b.actionBudget == nil || b.actionBudget.generatorLimits == nil {
 		return 0
 	}
-	if limit, found := b.generatorLimits[name]; found {
+	if limit, found := b.actionBudget.generatorLimits[name]; found {
 		return limit
 	}
-	return b.generatorLimits[constants.ActionDefault]
+	return b.actionBudget.generatorLimits[constants.ActionDefault]
 }
 
-func remainingFromStart(limit time.Duration, startedAt time.Time, now func() time.Time) time.Duration {
-	if limit <= 0 || now == nil {
+func newDeadlineBudget(remaining time.Duration, now func() time.Time) deadlineBudget {
+	now = clockOrDefault(now)
+	if remaining == unlimitedRemaining {
+		return deadlineBudget{
+			unlimited: true,
+			now:       now,
+		}
+	}
+	if remaining < 0 {
+		remaining = 0
+	}
+	return deadlineBudget{
+		deadline: now().Add(remaining),
+		now:      now,
+	}
+}
+
+func (b deadlineBudget) Remaining() time.Duration {
+	if b.now == nil {
 		return 0
 	}
-	remaining := limit - now().Sub(startedAt)
+	if b.unlimited {
+		return unlimitedRemaining
+	}
+	remaining := b.deadline.Sub(b.now())
 	if remaining <= 0 {
 		return 0
 	}
 	return remaining
+}
+
+func (b *ActionSearchBudget) clock() func() time.Time {
+	if b == nil {
+		return time.Now
+	}
+	return clockOrDefault(b.deadline.now)
+}
+
+func (b *jobSearchBudget) clock() func() time.Time {
+	if b == nil || b.actionBudget == nil {
+		return time.Now
+	}
+	return b.actionBudget.clock()
+}
+
+func searchDurationForLimit(limit time.Duration) time.Duration {
+	if limit == 0 {
+		return unlimitedRemaining
+	}
+	return limit
 }
 
 func clockOrDefault(now func() time.Time) func() time.Time {

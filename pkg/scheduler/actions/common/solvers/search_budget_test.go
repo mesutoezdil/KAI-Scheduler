@@ -152,7 +152,7 @@ func TestActionSearchBudgetRejectsMinJobAtOrAboveMaxJob(t *testing.T) {
 	}
 }
 
-func TestBeginJobMarksReducedBudgetWhenRemainingBelowMin(t *testing.T) {
+func TestBeginJobGuaranteesMinSearchWhenRemainingBelowMin(t *testing.T) {
 	clock := &fakeClock{now: time.Unix(0, 0)}
 	budget, err := newActionSearchBudgetWithClock(
 		sessionWithScenarioSearchBudgets(&kaiv1.ScenarioSearchBudgets{
@@ -171,7 +171,52 @@ func TestBeginJobMarksReducedBudgetWhenRemainingBelowMin(t *testing.T) {
 	jobBudget := budget.BeginJob()
 
 	require.True(t, jobBudget.ReducedBudget())
-	require.Equal(t, 25*time.Millisecond, jobBudget.Remaining())
+	require.Equal(t, 50*time.Millisecond, jobBudget.Remaining())
+}
+
+func TestBeginJobMarksReducedBudgetWhenRemainingBelowJobLimit(t *testing.T) {
+	clock := &fakeClock{now: time.Unix(0, 0)}
+	budget, err := newActionSearchBudgetWithClock(
+		sessionWithScenarioSearchBudgets(&kaiv1.ScenarioSearchBudgets{
+			MaxActionSearchDuration: map[string]metav1.Duration{
+				constants.ActionReclaim: scenarioSearchDurationForTest("1s"),
+			},
+			MaxJobSearchDuration: scenarioSearchDurationPtrForTest("500ms"),
+			MinJobSearchDuration: scenarioSearchDurationPtrForTest("50ms"),
+		}),
+		framework.Reclaim,
+		clock.Now,
+	)
+	require.NoError(t, err)
+
+	clock.Advance(750 * time.Millisecond)
+	jobBudget := budget.BeginJob()
+
+	require.True(t, jobBudget.ReducedBudget())
+	require.Equal(t, 250*time.Millisecond, jobBudget.Remaining())
+}
+
+func TestBeginJobGuaranteesMinSearchWhenActionBudgetExpired(t *testing.T) {
+	clock := &fakeClock{now: time.Unix(0, 0)}
+	budget, err := newActionSearchBudgetWithClock(
+		sessionWithScenarioSearchBudgets(&kaiv1.ScenarioSearchBudgets{
+			MaxActionSearchDuration: map[string]metav1.Duration{
+				constants.ActionReclaim: scenarioSearchDurationForTest("100ms"),
+			},
+			MaxJobSearchDuration: scenarioSearchDurationPtrForTest("1s"),
+			MinJobSearchDuration: scenarioSearchDurationPtrForTest("50ms"),
+		}),
+		framework.Reclaim,
+		clock.Now,
+	)
+	require.NoError(t, err)
+
+	clock.Advance(100 * time.Millisecond)
+	jobBudget := budget.BeginJob()
+
+	require.True(t, budget.Exhausted())
+	require.True(t, jobBudget.ReducedBudget())
+	require.Equal(t, 50*time.Millisecond, jobBudget.Remaining())
 }
 
 func TestBeginJobReturnsNotAttemptedWhenActionBudgetExpired(t *testing.T) {
@@ -190,7 +235,7 @@ func TestBeginJobReturnsNotAttemptedWhenActionBudgetExpired(t *testing.T) {
 	clock.Advance(100 * time.Millisecond)
 	jobBudget := budget.BeginJob()
 
-	require.False(t, jobBudget.ReducedBudget())
+	require.True(t, jobBudget.ReducedBudget())
 	require.True(t, budget.Exhausted())
 	require.Equal(t, time.Duration(0), jobBudget.Remaining())
 }
