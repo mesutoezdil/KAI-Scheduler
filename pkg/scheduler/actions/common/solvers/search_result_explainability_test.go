@@ -20,27 +20,27 @@ func TestSearchResultScenarioSearchUnresolved(t *testing.T) {
 	}{
 		{
 			name:           "deadline exhausted",
-			result:         terminalSearchResult(SearchResultDeadlineExhausted, false, true),
+			result:         terminalSearchResult(SearchResultDeadlineExhausted, false),
 			expectedReason: podgroup_info.ScenarioSearchResultDeadlineExhausted,
 		},
 		{
 			name:           "generators exhausted",
-			result:         terminalSearchResult(SearchResultGeneratorsExhausted, false, true),
+			result:         terminalSearchResult(SearchResultGeneratorsExhausted, false),
 			expectedReason: podgroup_info.ScenarioSearchResultGeneratorsExhausted,
 		},
 		{
 			name:           "no generator",
-			result:         terminalSearchResult(SearchResultNoGenerator, false, false),
+			result:         terminalSearchResult(SearchResultNoGenerator, false),
 			expectedReason: podgroup_info.ScenarioSearchResultNoGenerator,
 		},
 		{
 			name:           "not attempted",
-			result:         terminalSearchResult(SearchResultNotAttempted, false, false),
+			result:         terminalSearchResult(SearchResultNotAttempted, false),
 			expectedReason: podgroup_info.ScenarioSearchResultNotAttempted,
 		},
 		{
 			name:           "reduced budget",
-			result:         terminalSearchResult(SearchResultDeadlineExhausted, true, true),
+			result:         terminalSearchResult(SearchResultDeadlineExhausted, true),
 			expectedReason: podgroup_info.ScenarioSearchResultDeadlineExhausted,
 			reducedBudget:  true,
 		},
