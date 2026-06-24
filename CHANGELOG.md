@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Scoped admission `runtimeClassName` injection to GPU fraction pods only; whole-GPU pods are no longer mutated. `admission.gpuPodRuntimeClassName` is deprecated in favor of `admission.gpuFractionRuntimeClassName`. Reservation pod `runtimeClassName` now defaults to empty. [#1543](https://github.com/kai-scheduler/KAI-Scheduler/issues/1543) [davidLif](https://github.com/davidLif)
 - Removed redundant `PodDisruptionBudgetImplemented` guard from operator PDB creation helper [#1613](https://github.com/kai-scheduler/KAI-Scheduler/pull/1613) [dttung2905](https://github.com/dttung2905)
 - Updated Go toolchain and base build images to v1.26.3.
+- Reverted the `k8s.io/*` module group to v0.34.3, `k8s.io/kubernetes` to v1.34.2, and `sigs.k8s.io/controller-runtime` to v0.22.3.
 - **Breaking:** The podgroup produced for JobSet is now produces as a single PodGroup per JobSet with a two-level SubGroup hierarchy (one parent SubGroup per `replicatedJob`, one leaf SubGroup per replica) regardless of `startupPolicyOrder`. The `kai.scheduler/batch-min-member` annotation on the JobSet now overrides the root `minSubGroup`; the same annotation on `replicatedJobs[].template.metadata.annotations` overrides the leaf `minMember` (defaulting to `template.spec.parallelism`). [#1617](https://github.com/kai-scheduler/KAI-Scheduler/pull/1617) [davidLif](https://github.com/davidLif)
 
 ### Fixed

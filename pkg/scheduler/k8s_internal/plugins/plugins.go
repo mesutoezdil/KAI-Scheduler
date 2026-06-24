@@ -6,11 +6,13 @@ package plugins
 import (
 	"context"
 
+	featureutil "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	resourceslicetracker "k8s.io/dynamic-resource-allocation/resourceslice/tracker"
-	ksf "k8s.io/kube-scheduler/framework"
+	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/scheduler/apis/config"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	k8splfeature "k8s.io/kubernetes/pkg/scheduler/framework/plugins/feature"
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/interpodaffinity"
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/nodeaffinity"
@@ -18,29 +20,28 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/tainttoleration"
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/volumebinding"
 
-	featuregates "github.com/kai-scheduler/KAI-scheduler/pkg/common/feature_gates"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/common/k8s_utils"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/log"
 )
 
 type K8sPlugins struct {
-	FrameworkHandle      ksf.Handle
+	FrameworkHandle      k8sframework.Handle
 	Features             k8splfeature.Features
 	InformerFactory      informers.SharedInformerFactory
 	ResourceSliceTracker *resourceslicetracker.Tracker
-	SessionDRAManager    ksf.SharedDRAManager
+	SessionDRAManager    k8sframework.SharedDRAManager
 
-	NodePorts       ksf.Plugin
-	TaintToleration ksf.Plugin
-	NodeAffinity    ksf.Plugin
-	PodAffinity     ksf.Plugin
-	VolumeBinding   ksf.Plugin
+	NodePorts       k8sframework.Plugin
+	TaintToleration k8sframework.Plugin
+	NodeAffinity    k8sframework.Plugin
+	PodAffinity     k8sframework.Plugin
+	VolumeBinding   k8sframework.Plugin
 }
 
 func InitializeInternalPlugins(
 	client kubernetes.Interface,
 	informerFactory informers.SharedInformerFactory,
-	nodeInfoLister ksf.NodeInfoLister,
+	nodeInfoLister k8sframework.NodeInfoLister,
 ) *K8sPlugins {
 	initiatedPlugins := &K8sPlugins{}
 	k8sFrameworkHandle := k8s_utils.NewFrameworkHandle(
@@ -49,7 +50,7 @@ func InitializeInternalPlugins(
 	initiatedPlugins.FrameworkHandle = k8sFrameworkHandle
 	initiatedPlugins.InformerFactory = informerFactory
 
-	if featuregates.DynamicResourcesEnabled() {
+	if featureutil.DefaultMutableFeatureGate.Enabled(features.DynamicResourceAllocation) {
 		tracker, err := k8s_utils.StartResourceSliceTracker(informerFactory, client)
 		if err != nil {
 			log.InfraLogger.Errorf("Failed to start resource slice tracker: %v", err)

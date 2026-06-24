@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ksf "k8s.io/kube-scheduler/framework"
 	"k8s.io/kubernetes/pkg/features"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	k8splfeature "k8s.io/kubernetes/pkg/scheduler/framework/plugins/feature"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -44,7 +45,7 @@ func New(
 	var k8sPlugins []common.K8sPlugin
 	k8sFramework, k8sFeatures := newK8sPluginDependencies(client, informerFactory)
 
-	for _, initFunc := range []func(ksf.Handle, *k8splfeature.Features, int64) (common.K8sPlugin, error){
+	for _, initFunc := range []func(k8sframework.Handle, *k8splfeature.Features, int64) (common.K8sPlugin, error){
 		volumebinding.NewVolumeBindingPlugin,
 		dynamicresources.NewDynamicResourcesPlugin,
 	} {
@@ -86,7 +87,7 @@ func NewDynamicResources(
 func newK8sPluginDependencies(
 	client kubernetes.Interface,
 	informerFactory informers.SharedInformerFactory,
-) (ksf.Handle, *k8splfeature.Features) {
+) (k8sframework.Handle, *k8splfeature.Features) {
 	k8sFramework := k8s_utils.NewFrameworkHandle(client, informerFactory, nil)
 	k8sFeatures := k8splfeature.Features{
 		EnableDynamicResourceAllocation: feature.DefaultFeatureGate.Enabled(features.DynamicResourceAllocation),

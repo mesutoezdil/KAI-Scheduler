@@ -31,6 +31,7 @@ import (
 	"k8s.io/klog/v2"
 	ksf "k8s.io/kube-scheduler/framework"
 	"k8s.io/kubernetes/pkg/scheduler/apis/config"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/kubernetes/pkg/scheduler/framework/parallelize"
 	scheduling "k8s.io/kubernetes/pkg/scheduler/framework/plugins/volumebinding"
 	"k8s.io/kubernetes/pkg/scheduler/metrics"
@@ -41,35 +42,35 @@ import (
 type K8sFramework struct {
 	kubeClient      kubernetes.Interface
 	informerFactory informers.SharedInformerFactory
-	nodeInfoLister  ksf.NodeInfoLister
+	nodeInfoLister  k8sframework.NodeInfoLister
 	parallelizer    parallelize.Parallelizer
 }
 
-var _ ksf.Handle = &K8sFramework{}
+var _ k8sframework.Handle = &K8sFramework{}
 
 type listersWrapper struct {
-	nodeInfoLister ksf.NodeInfoLister
+	nodeInfoLister k8sframework.NodeInfoLister
 }
 
-func (lw *listersWrapper) NodeInfos() ksf.NodeInfoLister {
+func (lw *listersWrapper) NodeInfos() k8sframework.NodeInfoLister {
 	return lw.nodeInfoLister
 }
 
-func (lw *listersWrapper) StorageInfos() ksf.StorageInfoLister {
+func (lw *listersWrapper) StorageInfos() k8sframework.StorageInfoLister {
 	return nil
 }
 
-func (f *K8sFramework) SnapshotSharedLister() ksf.SharedLister {
+func (f *K8sFramework) SnapshotSharedLister() k8sframework.SharedLister {
 	return &listersWrapper{f.nodeInfoLister}
 }
 
 // IterateOverWaitingPods acquires a read lock and iterates over the WaitingPods map.
-func (f *K8sFramework) IterateOverWaitingPods(callback func(ksf.WaitingPod)) {
+func (f *K8sFramework) IterateOverWaitingPods(callback func(k8sframework.WaitingPod)) {
 	panic("not implemented")
 }
 
 // GetWaitingPod returns a reference to a WaitingPod given its UID.
-func (f *K8sFramework) GetWaitingPod(uid types.UID) ksf.WaitingPod {
+func (f *K8sFramework) GetWaitingPod(uid types.UID) k8sframework.WaitingPod {
 	panic("not implemented")
 }
 
@@ -109,7 +110,7 @@ func (f *K8sFramework) EventRecorder() events.EventRecorder {
 	return nil
 }
 
-func (f *K8sFramework) AddNominatedPod(logger klog.Logger, pod ksf.PodInfo, nominatingInfo *ksf.NominatingInfo) {
+func (f *K8sFramework) AddNominatedPod(logger klog.Logger, pod ksf.PodInfo, nominatingInfo *k8sframework.NominatingInfo) {
 	panic("implement me")
 }
 
@@ -129,7 +130,7 @@ func (f *K8sFramework) RunPreScorePlugins(ctx context.Context, state ksf.CycleSt
 	panic("implement me")
 }
 
-func (f *K8sFramework) RunScorePlugins(ctx context.Context, state ksf.CycleState, pod *v1.Pod, infos []ksf.NodeInfo) ([]ksf.NodePluginScores, *ksf.Status) {
+func (f *K8sFramework) RunScorePlugins(ctx context.Context, state ksf.CycleState, pod *v1.Pod, infos []ksf.NodeInfo) ([]k8sframework.NodePluginScores, *ksf.Status) {
 	panic("implement me")
 }
 
@@ -157,11 +158,11 @@ func (f *K8sFramework) RunFilterPluginsWithNominatedPods(ctx context.Context, st
 	panic("implement me")
 }
 
-func (f *K8sFramework) Extenders() []ksf.Extender {
+func (f *K8sFramework) Extenders() []k8sframework.Extender {
 	panic("implement me")
 }
 
-func (f *K8sFramework) Parallelizer() ksf.Parallelizer {
+func (f *K8sFramework) Parallelizer() parallelize.Parallelizer {
 	return f.parallelizer
 }
 
@@ -169,11 +170,11 @@ func (f *K8sFramework) Activate(logger klog.Logger, pods map[string]*v1.Pod) {
 	panic("implement me")
 }
 
-func (f *K8sFramework) SharedDRAManager() ksf.SharedDRAManager {
+func (f *K8sFramework) SharedDRAManager() k8sframework.SharedDRAManager {
 	return nil
 }
 
-func (f *K8sFramework) APICacher() ksf.APICacher {
+func (f *K8sFramework) APICacher() k8sframework.APICacher {
 	panic("implement me")
 }
 
@@ -181,28 +182,12 @@ func (f *K8sFramework) APIDispatcher() ksf.APIDispatcher {
 	panic("implement me")
 }
 
-func (f *K8sFramework) ProfileName() string {
-	return ""
-}
-
-func (f *K8sFramework) SharedCSIManager() ksf.CSIManager {
-	return nil
-}
-
-func (f *K8sFramework) WorkloadManager() ksf.WorkloadManager {
-	return nil
-}
-
-func (f *K8sFramework) SignPod(_ context.Context, _ *v1.Pod, _ bool) ksf.PodSignature {
-	panic("implement me")
-}
-
 // NewFrameworkHandle creates a FrameworkHandle interface, which is used by k8s plugins.
 func NewFrameworkHandle(
 	client kubernetes.Interface,
 	informerFactory informers.SharedInformerFactory,
-	nodeInfoLister ksf.NodeInfoLister,
-) ksf.Handle {
+	nodeInfoLister k8sframework.NodeInfoLister,
+) k8sframework.Handle {
 	metrics.InitMetrics()
 	return &K8sFramework{
 		kubeClient:      client,

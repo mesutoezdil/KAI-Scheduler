@@ -15,6 +15,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ksf "k8s.io/kube-scheduler/framework"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 	k8splfeature "k8s.io/kubernetes/pkg/scheduler/framework/plugins/feature"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -29,7 +30,7 @@ type dynamicResourcesPlugin struct {
 }
 
 func NewDynamicResourcesPlugin(
-	k8sFramework ksf.Handle,
+	k8sFramework k8sframework.Handle,
 	_ *k8splfeature.Features,
 	bindTimeoutSeconds int64,
 ) (plugins.K8sPlugin, error) {

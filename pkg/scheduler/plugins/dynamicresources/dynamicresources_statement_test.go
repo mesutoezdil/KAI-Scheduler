@@ -11,10 +11,12 @@ import (
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/h2non/gock.v1"
 	resourceapi "k8s.io/api/resource/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	featuregate "k8s.io/component-base/featuregate/testing"
+	"k8s.io/kubernetes/pkg/features"
 
 	schedulingv1alpha2 "github.com/kai-scheduler/KAI-scheduler/pkg/apis/scheduling/v1alpha2"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/common/constants"
-	featuregates "github.com/kai-scheduler/KAI-scheduler/pkg/common/feature_gates"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/bindrequest_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/eviction_info"
@@ -752,10 +754,7 @@ type taskState struct {
 }
 
 func setupTestSession(t *testing.T, topology test_utils.TestTopologyBasic, controller *Controller) *framework.Session {
-	featuregates.SetDynamicResourcesEnabledForTest(true)
-	t.Cleanup(func() {
-		featuregates.SetDynamicResourcesEnabledForTest(false)
-	})
+	featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicResourceAllocation, true)
 	ssn := test_utils.BuildSession(topology, controller)
 	time.Sleep(1 * time.Millisecond)
 	return ssn

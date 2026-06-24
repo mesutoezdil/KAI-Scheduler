@@ -11,6 +11,7 @@ import (
 	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 	ksf "k8s.io/kube-scheduler/framework"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/common_info"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/configmap_info"
@@ -49,7 +50,7 @@ func (_ *ConfigMapPredicate) isFilterRequired(_ *v1.Pod) bool {
 }
 
 func (cmp *ConfigMapPredicate) PreFilter(ctx context.Context, _ ksf.CycleState, pod *v1.Pod, _ []ksf.NodeInfo) (
-	*ksf.PreFilterResult, *ksf.Status) {
+	*k8sframework.PreFilterResult, *ksf.Status) {
 	requiredConfigMapNames := getAllRequiredConfigMapNames(pod)
 
 	var missingConfigMaps []string

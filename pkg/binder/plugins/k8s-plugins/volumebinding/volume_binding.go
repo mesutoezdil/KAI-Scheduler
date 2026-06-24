@@ -24,7 +24,7 @@ type volumeBindingPlugin struct {
 }
 
 func NewVolumeBindingPlugin(
-	k8sFramework ksf.Handle,
+	k8sFramework k8sframework.Handle,
 	features *k8splfeature.Features,
 	bindTimeoutSeconds int64,
 ) (plugins.K8sPlugin, error) {

@@ -15,7 +15,7 @@ KIND_CONFIG=${KIND_CONFIG:-""}
 GENERATED_KIND_CONFIG=""
 PORT_FORWARD_PID=""
 
-: ${KIND_K8S_TAG:="v1.35.0"}
+: ${KIND_K8S_TAG:="v1.34.0"}
 : ${KIND_IMAGE:="kindest/node:${KIND_K8S_TAG}"}
 
 cleanup() {

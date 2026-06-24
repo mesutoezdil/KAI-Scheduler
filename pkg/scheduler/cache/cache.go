@@ -38,7 +38,7 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
-	ksf "k8s.io/kube-scheduler/framework"
+	k8sframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
 	kubeaischedulerver "github.com/kai-scheduler/KAI-scheduler/pkg/apis/client/clientset/versioned"
 	kubeaischedulerschema "github.com/kai-scheduler/KAI-scheduler/pkg/apis/client/clientset/versioned/scheme"
@@ -158,7 +158,9 @@ func newSchedulerCache(schedulerCacheParams *SchedulerCacheParams) *SchedulerCac
 	sc.informerFactory = informers.NewSharedInformerFactory(sc.kubeClient, 0)
 	sc.kubeAiSchedulerInformerFactory = kubeaischedulerinfo.NewSharedInformerFactory(sc.kubeAiSchedulerClient, 0)
 
-	featuregates.SetDRAFeatureGate(schedulerCacheParams.DiscoveryClient)
+	if err := featuregates.SetDRAFeatureGate(schedulerCacheParams.DiscoveryClient); err != nil {
+		log.InfraLogger.Warningf("Failed to set DRA feature gate: ", err)
+	}
 	featuregates.SetNodeResourceTopologyFeatureGate(schedulerCacheParams.DiscoveryClient)
 	if featuregates.NodeResourceTopologyEnabled() && schedulerCacheParams.NRTClient != nil {
 		sc.nrtInformerFactory = nrtinformers.NewSharedInformerFactory(schedulerCacheParams.NRTClient, 0)
@@ -450,7 +452,7 @@ func (sc *SchedulerCache) KubeInformerFactory() informers.SharedInformerFactory 
 	return sc.informerFactory
 }
 
-func (sc *SchedulerCache) SnapshotSharedLister() ksf.NodeInfoLister {
+func (sc *SchedulerCache) SnapshotSharedLister() k8sframework.NodeInfoLister {
 	return &sc.K8sClusterPodAffinityInfo
 }
 

@@ -11,9 +11,11 @@ import (
 	. "go.uber.org/mock/gomock"
 	"gopkg.in/h2non/gock.v1"
 	resourceapi "k8s.io/api/resource/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	featuregate "k8s.io/component-base/featuregate/testing"
+	"k8s.io/kubernetes/pkg/features"
 
 	"github.com/kai-scheduler/KAI-scheduler/pkg/common/constants"
-	featuregates "github.com/kai-scheduler/KAI-scheduler/pkg/common/feature_gates"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/api/pod_status"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/test_utils"
 	"github.com/kai-scheduler/KAI-scheduler/pkg/scheduler/test_utils/dra_fake"
@@ -268,7 +270,7 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 				},
 			},
 			err: "pod test/job-1-0 cannot be scheduled, it references resource claims <claim-0, claim-1> " +
-				"while dynamic resource allocation is not available in the cluster",
+				"while dynamic resource allocation feature is not enabled in cluster",
 		},
 		{
 			name:    "Dynamic Resource Allocation is disabled - with template",
@@ -317,7 +319,7 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 				},
 			},
 			err: "pod test/job-1-0 cannot be scheduled, it references resource claims <template-0> " +
-				"while dynamic resource allocation is not available in the cluster",
+				"while dynamic resource allocation feature is not enabled in cluster",
 		},
 		{
 			name:    "Too many consumers per resource claim",
@@ -543,10 +545,8 @@ func TestDynamicResourceAllocationPreFilter(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Logf("Running test number: %v, test name: %v,", i, test.name)
 
-			featuregates.SetDynamicResourcesEnabledForTest(test.enabled)
-			t.Cleanup(func() {
-				featuregates.SetDynamicResourcesEnabledForTest(false)
-			})
+			featuregate.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate,
+				features.DynamicResourceAllocation, test.enabled)
 
 			ssn := test_utils.BuildSession(test.topology, controller)
 
