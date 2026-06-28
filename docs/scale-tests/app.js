@@ -186,6 +186,19 @@ function renderSpecDetail(spec, detailId) {
   return `<div class="spec-detail" id="${detailId}">${sections.join('')}</div>`;
 }
 
+function specMetricsHtml(spec) {
+  const m = (typeof findMetrics === 'function' && findMetrics(spec.ReportEntries))
+    || (typeof parseMetricsFromOutput === 'function' && parseMetricsFromOutput(spec.CapturedGinkgoWriterOutput));
+  if (!m) return '';
+  const parts = [];
+  if (m.nodes != null)                            parts.push(`${m.nodes} nodes`);
+  if (m.jobs  != null)                            parts.push(`${m.jobs} jobs`);
+  const t = m.total_time || m.time;
+  if (t != null && t !== '')                      parts.push(typeof t === 'string' ? t.replace(/(\d+m)[\d.]+s/, '$1').trim() : `${t}s`);
+  if (!parts.length) return '';
+  return `<div class="spec-metrics">${parts.map(p => `<span>${esc(p)}</span>`).join('<span class="sep-dot">·</span>')}</div>`;
+}
+
 function renderSpec(spec) {
   if (!specVisible(spec)) return '';
 
@@ -207,6 +220,7 @@ function renderSpec(spec) {
           <span>${esc(fmtTime(spec.StartTime))}</span>
           ${spec.NumAttempts > 1 ? `<span class="c-skip">${spec.NumAttempts} attempts</span>` : ''}
         </div>
+        ${specMetricsHtml(spec)}
         ${detail}
       </div>
       ${detail ? `<button class="detail-btn" onclick="toggleDetail('${detailId}')">details</button>` : ''}

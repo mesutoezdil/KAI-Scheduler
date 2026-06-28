@@ -259,11 +259,6 @@ function createChart(canvasId, dataPoints, config) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: 'nearest',
-        axis: 'x',
-        intersect: false,
-      },
       plugins: {
         legend: {
           display: true,
@@ -275,46 +270,7 @@ function createChart(canvasId, dataPoints, config) {
             usePointStyle: true,
           },
         },
-        tooltip: {
-          backgroundColor: cssVar('--surface'),
-          titleColor: cssVar('--text'),
-          bodyColor: cssVar('--text'),
-          borderColor: cssVar('--border'),
-          borderWidth: 1,
-          padding: 10,
-          displayColors: true,
-          callbacks: {
-            title: (items) => {
-              if (items[0]) {
-                const lines = [
-                  new Date(items[0].parsed.x).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                ];
-
-                // Access commit from raw data
-                const datasetIndex = items[0].datasetIndex;
-                const dataIndex = items[0].dataIndex;
-                const rawData = items[0].chart.data.datasets[datasetIndex].data[dataIndex];
-
-                if (rawData.commit) {
-                  lines.push(`Commit: ${rawData.commit.substring(0, 8)}`);
-                }
-
-                return lines;
-              }
-              return '';
-            },
-            label: (context) => {
-              const value = context.parsed.y;
-              return `${context.dataset.label}: ${value.toFixed(3)}s`;
-            },
-          },
-        },
+        tooltip: { enabled: false },
       },
       scales: {
         x: {
