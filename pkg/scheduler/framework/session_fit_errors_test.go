@@ -88,6 +88,27 @@ func TestRecomputeDetailedFitErrorsBuildsCurrentResourceDetails(t *testing.T) {
 	}
 }
 
+func TestRecomputeDetailedFitErrorsSkipsTypedNilFitError(t *testing.T) {
+	ssn, job, task := buildDetailedFitErrorSession(t)
+	ssn.AddPredicateFn(func(
+		task *pod_info.PodInfo,
+		_ *podgroup_info.PodGroupInfo,
+		node *node_info.NodeInfo,
+	) error {
+		if node.Name == "node-a" {
+			return common_info.NewFitError(task.Name, task.Namespace, node.Name, "NodeAffinityMismatch")
+		}
+		var fitError *common_info.TasksFitError
+		return fitError
+	})
+
+	nodeErrors, err := ssn.RecomputeDetailedFitErrors(job, task)
+
+	require.NoError(t, err)
+	require.Len(t, nodeErrors, 1)
+	require.Equal(t, "node-a", nodeErrors[0].NodeName)
+}
+
 func buildDetailedFitErrorSession(
 	t *testing.T,
 ) (*framework.Session, *podgroup_info.PodGroupInfo, *pod_info.PodInfo) {

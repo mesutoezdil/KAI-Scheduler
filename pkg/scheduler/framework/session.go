@@ -352,7 +352,9 @@ func (ssn *Session) RecomputeDetailedFitErrors(
 			continue
 		}
 		if err := ssn.PredicateFn(task, job, node); err != nil {
-			nodeErrors = append(nodeErrors, taskFitErrorFromError(task, node, err))
+			if fitError := taskFitErrorFromError(task, node, err); fitError != nil {
+				nodeErrors = append(nodeErrors, fitError)
+			}
 		}
 	}
 	return nodeErrors, nil
@@ -362,6 +364,9 @@ func taskFitErrorFromError(
 	task *pod_info.PodInfo, node *node_info.NodeInfo, err error,
 ) *common_info.TasksFitError {
 	if fitError, ok := err.(*common_info.TasksFitError); ok {
+		if fitError == nil {
+			return nil
+		}
 		fitErrorCopy := *fitError
 		fitErrorCopy.NodeName = node.Name
 		fitErrorCopy.Reasons = append([]string(nil), fitError.Reasons...)
