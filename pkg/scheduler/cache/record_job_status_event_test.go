@@ -356,7 +356,7 @@ func TestRecordJobStatusEvent(t *testing.T) {
 				fitErrors := common_info.NewFitErrors()
 				for node, msg := range nodeErrors {
 					fitError := common_info.NewFitError(string(podID), "namespace-1", node, msg)
-					fitErrors.SetNodeError(node, fitError)
+					fitErrors.AddNodeError(fitError)
 				}
 				podGroupInfo.AddTaskFitErrors(podGroupInfo.GetAllPodsMap()[podID], fitErrors)
 			}

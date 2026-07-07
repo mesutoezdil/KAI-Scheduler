@@ -41,12 +41,12 @@ func TestFitErrors_Error(t *testing.T) {
 
 func TestFitErrorsAggregatesNodeReasons(t *testing.T) {
 	fitErrors := NewFitErrors()
-	fitErrors.SetNodeError("node-a", NewFitErrorWithDetailedMessage(
+	fitErrors.AddNodeError(NewFitErrorWithDetailedMessage(
 		"pod", "namespace", "node-a",
 		[]string{"node(s) didn't have enough resources: GPUs"},
 		"Node didn't have enough resources: GPUs, requested: 1, used: 8, capacity: 8",
 	))
-	fitErrors.SetNodeError("node-b", NewFitErrorWithDetailedMessage(
+	fitErrors.AddNodeError(NewFitErrorWithDetailedMessage(
 		"pod", "namespace", "node-b",
 		[]string{
 			"node(s) didn't have enough resources: GPUs",

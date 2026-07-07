@@ -182,11 +182,7 @@ func (f *TasksFitErrors) SetError(err string) {
 	f.err = err
 }
 
-func (f *TasksFitErrors) SetNodeError(nodeName string, err error) {
-	f.AddNodeError(err)
-}
-
-func (f *TasksFitErrors) AddNodeErrors(errors *TasksFitErrors) {
+func (f *TasksFitErrors) AddReasonCounts(errors *TasksFitErrors) {
 	if errors == nil {
 		return
 	}
